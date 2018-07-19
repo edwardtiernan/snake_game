@@ -1,8 +1,10 @@
 import random
 import DelineateNetwork
 import FileSettings
-import Generations
 import numpy as np
+
+import time
+start_time = time.time()
 
 
 def readparametersfromfile(constraintfilename=FileSettings.settingsdict['constraintfilename']):
@@ -50,6 +52,8 @@ def readparametersfromfile(constraintfilename=FileSettings.settingsdict['constra
             percent_zero_storage.append(float(templine[-2]))
             percent_zero_storage.append(float(templine[-1]))
     return
+readparametersfromfile()
+
 
 def countsubcatchments(inputfilename=FileSettings.settingsdict['inputfilename']):
     global count
@@ -57,6 +61,8 @@ def countsubcatchments(inputfilename=FileSettings.settingsdict['inputfilename'])
         contents = swmmput.readlines()
         count = len(contents)
     return(count)
+countsubcatchments()
+
 
 def read_initial_parameters(inputfilename):
     subc_params = []
@@ -100,6 +106,8 @@ def read_initial_parameters(inputfilename):
             subc_params[i].append(subarea_params[i][j])
         subcatchment_parameters.append(subc_params[i])
     return(subcatchment_parameters)
+read_initial_parameters(FileSettings.settingsdict['inputfilename'])
+
 
 def read_subc_names(inputfilename):
     subc_params = []
@@ -138,7 +146,7 @@ def compile_initial_guess(inputfilename):
     global relevant_subcatchment_indices, relevant_subcatchment_parameters, original_guess_flat
     relevant_subcatchment_indices = []
     for allsub in read_subc_names(inputfilename):
-        for upstreamsub in DelineateNetwork.subnetwork_subcatchments():
+        for upstreamsub in DelineateNetwork.list_of_subcatchments:
             if allsub == upstreamsub:
                 relevant_subcatchment_indices.append(subc_names.index(allsub))
     relevant_subcatchment_parameters = []
@@ -189,7 +197,6 @@ def createrandomsetofP(inputfilename):
     return(floatnexttemporaryguess)
 
 
-
 def crossover(inputfilename, trialfile, survivinglist):
     temporaryguess = compile_initial_guess(inputfilename)
     nexttemporaryguess = compile_initial_guess(random.choice(survivinglist))
@@ -211,8 +218,9 @@ def castfloatsasstrings(inputfilename):
         guess_strings.append(str(float))
     return(guess_strings)
 
+
 def transformation_fatten(oneDlistinput):
-    new_twoDlistoutput = np.zeros((len(relevant_subcatchment_parameters[0]),len(relevant_subcatchment_parameters)))
+    new_twoDlistoutput = np.zeros((len(relevant_subcatchment_parameters[0]), len(relevant_subcatchment_parameters)))
     row_count = -1
     col_count = 0
     for oneDparameter in oneDlistinput:
@@ -224,6 +232,7 @@ def transformation_fatten(oneDlistinput):
             col_count = col_count + 1
             new_twoDlistoutput[row_count][col_count] = oneDparameter
     return(new_twoDlistoutput)
+
 
 def insertguessestoinputfile(inputfilename, trialfile):
     guess = transformation_fatten(castfloatsasstrings(inputfilename))
@@ -270,16 +279,17 @@ def insertguessestoinputfile(inputfilename, trialfile):
                                 splitline[5] = str(guess[7][DelineateNetwork.list_of_subcatchments.index(sub)])
                                 contents[templine] = "      ".join(splitline) + '\n'
                                 break
+    print("Time for everything else:", time.time() - start_time)
     with open(trialfile, 'w') as newfile:
         for i in range(count):
             newfile.write(contents[i])
     newfile.close()
+    print("Time for writing:", time.time() - start_time)
     return
 
 def create_generation(inputfilename, filelist):
     for trialfile in filelist:
         insertguessestoinputfile(inputfilename, trialfile)
     return
-#create_generation(inputfilename, filelist)
-
+create_generation(FileSettings.settingsdict['inputfilename'], FileSettings.settingsdict['filelist'])
 
