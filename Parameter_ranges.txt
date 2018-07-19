@@ -1,0 +1,8 @@
+Percent Impervious (Low High)		- 0		100
+Width (Low High)			- 1		1000
+Slope (Low High)			- 0.0001	0.4
+Impervious N (Low High)			- 0.001		0.1
+Pervious N (Low High)			- 0.001		0.1
+Impervious Storage (Low High)		- 0.001		3
+Pervious Storage (Low High)		- 0.001		3
+Percent Zero Storage (Low High)		- 0		100
