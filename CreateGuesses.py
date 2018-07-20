@@ -2,6 +2,8 @@ import random
 import DelineateNetwork
 import FileSettings
 import numpy as np
+import timeit
+import re
 
 import time
 start_time = time.time()
@@ -141,7 +143,7 @@ def transformation_flatten(twoDlistinput):
             oneDlistoutput.append(twoDlistinput[i][j])
     return(oneDlistoutput)
 
-
+mycode = '''
 def compile_initial_guess(inputfilename):
     global relevant_subcatchment_indices, relevant_subcatchment_parameters, original_guess_flat
     relevant_subcatchment_indices = []
@@ -157,7 +159,7 @@ def compile_initial_guess(inputfilename):
         original_guess_flat = initial_guess_flat
     return(initial_guess_flat)
 #compile_initial_guess(inputfilename)
-
+'''
 
 def caststringsasfloats(inputfilename):
     initial_guess_floats = []
@@ -291,5 +293,6 @@ def create_generation(inputfilename, filelist):
     for trialfile in filelist:
         insertguessestoinputfile(inputfilename, trialfile)
     return
-create_generation(FileSettings.settingsdict['inputfilename'], FileSettings.settingsdict['filelist'])
+#create_generation(FileSettings.settingsdict['inputfilename'], FileSettings.settingsdict['filelist'])
 
+print(timeit.timeit(stmt= mycode, number=1000))
