@@ -54,7 +54,7 @@ def readparametersfromfile(constraintfilename=FileSettings.settingsdict['constra
             percent_zero_storage.append(float(templine[-2]))
             percent_zero_storage.append(float(templine[-1]))
     return
-readparametersfromfile()
+#readparametersfromfile()
 
 
 def countsubcatchments(inputfilename=FileSettings.settingsdict['inputfilename']):
@@ -63,7 +63,7 @@ def countsubcatchments(inputfilename=FileSettings.settingsdict['inputfilename'])
         contents = swmmput.readlines()
         count = len(contents)
     return(count)
-countsubcatchments()
+#countsubcatchments()
 
 
 def read_initial_parameters(inputfilename):
@@ -108,7 +108,7 @@ def read_initial_parameters(inputfilename):
             subc_params[i].append(subarea_params[i][j])
         subcatchment_parameters.append(subc_params[i])
     return(subcatchment_parameters)
-read_initial_parameters(FileSettings.settingsdict['inputfilename'])
+#read_initial_parameters(FileSettings.settingsdict['inputfilename'])
 
 
 def read_subc_names(inputfilename):
@@ -143,7 +143,6 @@ def transformation_flatten(twoDlistinput):
             oneDlistoutput.append(twoDlistinput[i][j])
     return(oneDlistoutput)
 
-mycode = '''
 def compile_initial_guess(inputfilename):
     global relevant_subcatchment_indices, relevant_subcatchment_parameters, original_guess_flat
     relevant_subcatchment_indices = []
@@ -159,7 +158,6 @@ def compile_initial_guess(inputfilename):
         original_guess_flat = initial_guess_flat
     return(initial_guess_flat)
 #compile_initial_guess(inputfilename)
-'''
 
 def caststringsasfloats(inputfilename):
     initial_guess_floats = []
@@ -295,4 +293,4 @@ def create_generation(inputfilename, filelist):
     return
 #create_generation(FileSettings.settingsdict['inputfilename'], FileSettings.settingsdict['filelist'])
 
-print(timeit.timeit(stmt= mycode, number=1000))
+#print(timeit.timeit(stmt= mycode, number=1000))
