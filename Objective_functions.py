@@ -49,7 +49,7 @@ def readobservationfile(observationdatafile):
                 obs_time.append(datetime.datetime(year, month, day, hour, minute, second))
         time_difference = obs_time[1] - obs_time[0]
     return time_difference
-readobservationfile(observationdatafile=FileSettings.settingsdict['observationdatafile'])
+#readobservationfile(observationdatafile=FileSettings.settingsdict['observationdatafile'])
 
 
 def normalizedpeakerror():
@@ -115,16 +115,17 @@ def objectivefunctions(filelist, observationdatafile, distancefilename, root):
                 sim_time.append(sim.current_time)
                 #print(sim.current_time)
                 hydrograph.append(root_location.total_inflow)
-            #print(max(hydrograph))
+            print(max(hydrograph))
             #print(max(obs_data))
         #file.write("{:.04f}     {:.04f}     {:.04f}     {:.04f}\n".format(normalizedpeakerror(), normalizedvolumeerror(),
                                                               #nashsutcliffe(), L2.L2norm(trialfile)))
         objFunc = [normalizedpeakerror(), normalizedvolumeerror(), nashsutcliffe(), NED(trialfile)]
         P_prime.append(objFunc)
-    print(P_prime)
+        print(objFunc)
     return(objFunc)
-#objectivefunctions(['trialfile01.inp'], FileSettings.settingsdict['observationdatafile'], FileSettings.settingsdict['distancefilename'],
-                   #FileSettings.settingsdict['root'])
+#objectivefunctions(FileSettings.settingsdict['Unionsetlist'], FileSettings.settingsdict['observationdatafile'],
+                   #FileSettings.settingsdict['distancefilename'], FileSettings.settingsdict['root'])
+
 
 def Par_objectivefunctions(trialfile, observationdatafile=FileSettings.settingsdict['observationdatafile']
                            , distancefilename=FileSettings.settingsdict['distancefilename']
@@ -168,6 +169,7 @@ def rankP_prime():
     seq = sorted(x)
     index = [seq.index(v) for v in x]
     return(index)
+#print(index)
 
 def par_rankP_prime():
     x = par_aggregateFunction()

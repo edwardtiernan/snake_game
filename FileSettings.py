@@ -61,9 +61,9 @@ Unionsets = files + Qfiles
 
 global settingsdict, geneticdict
 
-settingsdict = {'inputfilename': "1001_Brentwood_1D_Existing_Monitoring_rev1.inp", 'root': "BW1", 'constraintfilename': 'Parameter_ranges.txt',
+settingsdict = {'inputfilename': "Example1.inp", 'root': "18", 'constraintfilename': 'Parameter_ranges.txt',
                 'filelist': files, 'Qfilelist': Qfiles, 'Unionsetlist': Unionsets, 'distancefilename':
-                    "001_Brentwood_1D_Existing_Monitoring_rev1.inp", 'observationdatafile': "BW1flow_120208-141231_rev1.dat", 'weights':
+                    "Example1_ModelFinal.inp", 'observationdatafile': "trial_observation.dat", 'weights':
                     [1/4, 1/4, 1/4, 1/4]}
 
 geneticdict = {'initial_mutation': 0.5, 'population': 100, 'nsga_mutation': 0.1, 'crossover_bias': 0.5,
