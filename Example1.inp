@@ -71,7 +71,7 @@ RG1              INTENSITY 1:00     1.0      TIMESERIES TS1
 4                0.001      0.10       0.05       0.05       25         OUTLET    
 5                0.001      0.10       0.05       0.05       25         OUTLET    
 6                0.001      0.10       0.05       0.05       25         OUTLET    
-7                0.001      0.10       0.05       0.05       25         OUTLET    
+7                0.001      0.10       0.05       0.05       19         OUTLET    
 8                0.001      0.10       0.05       0.05       25         OUTLET    
 
 [INFILTRATION]
