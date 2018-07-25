@@ -33,17 +33,23 @@ def readobservationfile(observationdatafile):
                 else:
                     obs_data.append(float(templine[-1]))
                 day_templine_preprocessing = line.replace(' ', ';')
-                day_templine = re.split('[/|;|:]', day_templine_preprocessing)
+                day_templine = re.split('[/|;|:|\t]', day_templine_preprocessing)
                 month = int(day_templine[0])
                 day = int(day_templine[1])
                 year = int(day_templine[2])
                 hour = int(day_templine[3])
                 minute = int(day_templine[4])
                 second = int(day_templine[5])
+                if day_templine[6] == 'PM' and hour != 12:
+                    hour = hour + 12
+                    #print("PM detected: ", hour)
+                elif day_templine[6] == 'AM' and hour == 12:
+                    hour = 0
+                #print(day_templine)
                 obs_time.append(datetime.datetime(year, month, day, hour, minute, second))
         time_difference = obs_time[1] - obs_time[0]
     return time_difference
-#readobservationfile(observationdatafile)
+#readobservationfile(observationdatafile=FileSettings.settingsdict['observationdatafile'])
 
 
 def normalizedpeakerror():
@@ -109,14 +115,17 @@ def objectivefunctions(filelist, observationdatafile, distancefilename, root):
                 sim_time.append(sim.current_time)
                 #print(sim.current_time)
                 hydrograph.append(root_location.total_inflow)
-            #print(max(hydrograph))
+            print(max(hydrograph))
             #print(max(obs_data))
         #file.write("{:.04f}     {:.04f}     {:.04f}     {:.04f}\n".format(normalizedpeakerror(), normalizedvolumeerror(),
                                                               #nashsutcliffe(), L2.L2norm(trialfile)))
         objFunc = [normalizedpeakerror(), normalizedvolumeerror(), nashsutcliffe(), NED(trialfile)]
         P_prime.append(objFunc)
+        print(objFunc)
     return(objFunc)
-#objectivefunctions(filelist, observationdatafile, distancefilename)
+#objectivefunctions(FileSettings.settingsdict['Unionsetlist'], FileSettings.settingsdict['observationdatafile'],
+                   #FileSettings.settingsdict['distancefilename'], FileSettings.settingsdict['root'])
+
 
 def Par_objectivefunctions(trialfile, observationdatafile=FileSettings.settingsdict['observationdatafile']
                            , distancefilename=FileSettings.settingsdict['distancefilename']
@@ -160,6 +169,7 @@ def rankP_prime():
     seq = sorted(x)
     index = [seq.index(v) for v in x]
     return(index)
+#print(index)
 
 def par_rankP_prime():
     x = par_aggregateFunction()

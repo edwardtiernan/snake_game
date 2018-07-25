@@ -22,7 +22,6 @@ def createnetwork(inputfilename=FileSettings.settingsdict['inputfilename']):
         for sub in Subcatchments(sim):
             network.add_edge(sub.subcatchmentid, sub.connection[1])
     return
-createnetwork()
 
 
 def subnetworkdelineation(root=FileSettings.settingsdict['root']):
@@ -48,6 +47,7 @@ def subnetwork_subcatchments(inputfilename=FileSettings.settingsdict['inputfilen
             for subnode in subnetwork:
                 if subnode == subcatchmentname:
                     list_of_subcatchments.append(subcatchmentname)
+    print(list_of_subcatchments)
     return(list_of_subcatchments)
 
 subnetwork_subcatchments()
