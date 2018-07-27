@@ -4,14 +4,8 @@ from pyswmm import Simulation, Nodes
 import datetime
 import re
 import math
+import numpy as np
 import CreateGuesses
-
-#observationdatafile = "trial_observation.dat"
-#filelist = ['Example1.inp']
-#inputfilename = "Example1.inp"
-#distancefilename = "Example1_MaxModelFinal.inp"
-#root = "18"
-#weights = [1/4, 1/4, 1/4, 1/4]
 
 
 def readobservationfile(observationdatafile):
@@ -21,7 +15,6 @@ def readobservationfile(observationdatafile):
         global obs_data, time_difference, obs_time
         obs_data = []
         obs_time = []
-        obs_timestep = []
         for line in contents:
             linelist = list(line)
             if linelist[0] == ';' or linelist[0] == ' ' or len(list(line)) < 15:
@@ -42,21 +35,18 @@ def readobservationfile(observationdatafile):
                 second = int(day_templine[5])
                 if day_templine[6] == 'PM' and hour != 12:
                     hour = hour + 12
-                    #print("PM detected: ", hour)
                 elif day_templine[6] == 'AM' and hour == 12:
                     hour = 0
-                #print(day_templine)
                 obs_time.append(datetime.datetime(year, month, day, hour, minute, second))
         time_difference = obs_time[1] - obs_time[0]
     return time_difference
-#readobservationfile(observationdatafile=FileSettings.settingsdict['observationdatafile'])
 
 
 def normalizedpeakerror():
     peak_simulation = max(hydrograph)
     peak_observation = max(obs_data)
     peak_error = abs(peak_simulation - peak_observation)/(peak_observation + peak_simulation)
-    return(peak_error)
+    return peak_error
 
 
 def normalizedvolumeerror():
@@ -69,8 +59,8 @@ def normalizedvolumeerror():
         volume_observation_trapezoid = (obs_data[data_index-1]+obs_data[data_index])*time_difference.total_seconds()/2
         volume_observation = volume_observation + volume_observation_trapezoid
     volume_error = abs(volume_simulation-volume_observation)/(volume_simulation + volume_observation)
-    #print('{:.02f}      {:.02f}'.format(volume_simulation,volume_observation))
-    return(volume_error)
+    return volume_error
+
 
 def nashsutcliffe():
     average_obs = sum(obs_data)/len(obs_data)
@@ -82,27 +72,28 @@ def nashsutcliffe():
         diff_obs_obsave = (obs_data[i] - average_obs)**2
         sum_obs_obsave = sum_obs_obsave + diff_obs_obsave
     mNSE = sum_sim_obs/sum_obs_obsave
-    return(mNSE)
+    return mNSE
+
 
 def NED(trialfilename):
-    random_guess = CreateGuesses.caststringsasfloats(trialfilename)
-    initial_guess = CreateGuesses.caststringsasfloats(FileSettings.settingsdict['distancefilename'])
+    random_guess = CreateGuesses.compile_initial_guess(trialfilename)
+    initial_guess = CreateGuesses.compile_initial_guess(FileSettings.settingsdict['distancefilename'])
     sum = 0
-    count_m = len(random_guess)
-
-    for parameter in initial_guess:
-        num = (parameter - random_guess[initial_guess.index(parameter)])
-        denom = parameter + random_guess[initial_guess.index(parameter)]
-        ratio = (num/denom)**2
-        sum = sum + ratio
+    count_m = random_guess.size
+    for i in range(len(initial_guess)):
+        for j in range(len(initial_guess[0])):
+            num = abs(initial_guess[i][j] - random_guess[i][j])
+            denom = initial_guess[i][j] + random_guess[i][j]
+            ratio = (num/denom)**2
+            sum = sum + ratio
     NED = math.sqrt(sum)/count_m
-    return(NED)
+    return NED
+
 
 def objectivefunctions(filelist, observationdatafile, distancefilename, root):
     global hydrograph, simulation_timestep, sim_time, P_prime
     P_prime = []
     for trialfile in filelist:
-        #print(trialfile)
         hydrograph = []
         sim_time = []
         with Simulation(trialfile) as sim:
@@ -111,27 +102,17 @@ def objectivefunctions(filelist, observationdatafile, distancefilename, root):
             simulation_timestep = time_difference.total_seconds()
             sim.step_advance(simulation_timestep)
             for step in sim:
-                #print(root_location.total_inflow)
                 sim_time.append(sim.current_time)
-                #print(sim.current_time)
                 hydrograph.append(root_location.total_inflow)
-            print(max(hydrograph))
-            #print(max(obs_data))
-        #file.write("{:.04f}     {:.04f}     {:.04f}     {:.04f}\n".format(normalizedpeakerror(), normalizedvolumeerror(),
-                                                              #nashsutcliffe(), L2.L2norm(trialfile)))
         objFunc = [normalizedpeakerror(), normalizedvolumeerror(), nashsutcliffe(), NED(trialfile)]
         P_prime.append(objFunc)
-        print(objFunc)
-    return(objFunc)
-#objectivefunctions(FileSettings.settingsdict['Unionsetlist'], FileSettings.settingsdict['observationdatafile'],
-                   #FileSettings.settingsdict['distancefilename'], FileSettings.settingsdict['root'])
+    return objFunc
 
 
 def Par_objectivefunctions(trialfile, observationdatafile=FileSettings.settingsdict['observationdatafile']
                            , distancefilename=FileSettings.settingsdict['distancefilename']
                            , root=FileSettings.settingsdict['root']):
     global hydrograph, simulation_timestep, sim_time
-    #P_prime = []
     hydrograph = []
     sim_time = []
     with Simulation(trialfile) as sim:

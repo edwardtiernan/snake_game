@@ -17,7 +17,7 @@ def generations_generator(filelist, Qfilelist, Unionsetlist, observationdatafile
         for iteration in range(FileSettings.geneticdict['generations']):
             print(iteration)
             global P_prime
-            pool = multiprocessing.Pool(25)
+            pool = multiprocessing.Pool(8)
             P_prime = pool.map(Objective_functions.Par_objectivefunctions, FileSettings.settingsdict['Unionsetlist'])
             for guess in Objective_functions.par_rankP_prime():
                 if guess == 0:

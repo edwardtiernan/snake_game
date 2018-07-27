@@ -14,17 +14,18 @@ import time
 start_time = time.time()
 
 
-def main():
+def first_generation():
+    """Collection of functions that produce the first 200 input files.  They are all generated as straight mutations
+    from the same starting point input file.
+    :return: 200 input files, "trialfileXXX.inp"
+    """
 
     DelineateNetwork.subnetwork_subcatchments()
 
-    CreateGuesses.readparametersfromfile()
-    CreateGuesses.countsubcatchments()
-    CreateGuesses.read_initial_parameters(FileSettings.settingsdict['inputfilename'])
-    CreateGuesses.compile_initial_guess(FileSettings.settingsdict['inputfilename'])
-    CreateGuesses.compile_initial_guess(FileSettings.settingsdict['distancefilename'])
-    CreateGuesses.create_generation(FileSettings.settingsdict['inputfilename'], FileSettings.settingsdict['Unionsetlist'])
+    CreateGuesses.par_creategenerations()
+    return
 
+def subsequent_generations():
     Objective_functions.readobservationfile(FileSettings.settingsdict['observationdatafile'])
 
     #NextGuesses.read_initial_parameters(FileSettings.settingsdict['inputfilename'])
@@ -54,7 +55,8 @@ def cleanup():
 
 
 if __name__ == '__main__':
-    main()
+    first_generation()
+    subsequent_generations()
     cleanup()
     tracker.print_diff()
     print("Time elapsed:", time.time() - start_time)

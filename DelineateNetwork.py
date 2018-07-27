@@ -3,7 +3,8 @@ import networkx as nx
 import FileSettings
 
 import time
-start_time = time.time()
+global zero_time
+zero_time = time.time()
 
 global network, subnetwork
 network = nx.DiGraph()
@@ -47,11 +48,9 @@ def subnetwork_subcatchments(inputfilename=FileSettings.settingsdict['inputfilen
             for subnode in subnetwork:
                 if subnode == subcatchmentname:
                     list_of_subcatchments.append(subcatchmentname)
-    print(list_of_subcatchments)
     return(list_of_subcatchments)
 
 subnetwork_subcatchments()
-
 
 
 
