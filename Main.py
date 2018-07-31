@@ -3,15 +3,25 @@ import DelineateNetwork
 import CreateGuesses
 import Objective_functions
 import NextGuesses
-import Generations
+import Generations_Numpy
 import os
 import multiprocessing
-from pympler.tracker import SummaryTracker
-
-tracker = SummaryTracker()
-
 import time
+
+
 start_time = time.time()
+
+
+def pool_initializer():
+    """ Initializes the multiprocessing variable "pool" that can then be used to .map() the parallelizable functions
+    in Generations_Numpy.py and CreateGuesses.py
+
+    :return pool: a multiprocessing variable that utilizes the number of processors passed by the "multiprocessors"
+    keyword in the "settingsdict" dictionary variable.
+    """
+    global pool
+    pool = multiprocessing.Pool(FileSettings.settingsdict['multiprocessors'])
+    return pool
 
 
 def first_generation():
@@ -20,47 +30,49 @@ def first_generation():
     :return: 200 input files, "trialfileXXX.inp"
     """
 
-    DelineateNetwork.subnetwork_subcatchments()
-
     CreateGuesses.par_creategenerations()
     return
 
+
 def subsequent_generations():
-    Objective_functions.readobservationfile(FileSettings.settingsdict['observationdatafile'])
+    """Collection of functions that produce all input files after the first 200.  The observation data file is read to
+    be compared to by all other SWMM outputs by input files impregnated with parameter guesses.
 
-    #NextGuesses.read_initial_parameters(FileSettings.settingsdict['inputfilename'])
+    :return: many generations of 200 input files, theoretically converging to minimum objective function guess
+    """
+    #Objective_functions.readobservationfile()
 
-    Generations.generations_generator(FileSettings.settingsdict['filelist'], FileSettings.settingsdict['Qfilelist'],
-                                      FileSettings.settingsdict['Unionsetlist'],
-                                      FileSettings.settingsdict['observationdatafile'],
-                                      FileSettings.settingsdict['distancefilename'], FileSettings.settingsdict['root'])
+    Generations_Numpy.np_generations(FileSettings.settingsdict['Unionsetlist'],
+                                     FileSettings.settingsdict['observationdatafile'],
+                                     FileSettings.settingsdict['distancefilename'], FileSettings.settingsdict['root'])
     return
 
 
 def cleanup():
+    """ SWMMCALPY produces 200 .inp files, as well as the accompanying .out and .rpt files.  These are necessary
+    while the program is running, but at the end they can be deleted.  The best solution is also renamed.
+
+    :return: fewer superfluous files after SWMMCALPY completes its generations
+    """
     filelist = []
     dir_path = os.path.dirname(os.path.realpath("Main.py"))
     for f in os.listdir(dir_path):
         if f.startswith("Calibrated"):
             os.remove(os.path.join(dir_path, f))
-        if (f.startswith("trialfile") and f != Generations.solution):
+        if f.startswith("trialfile") and f != Generations_Numpy.solution:
             filelist.append(f)
-        if (f.endswith("Example1.rpt") or f.endswith("Example1.out")):
+        if f.endswith("Example1.rpt") or f.endswith("Example1.out"):
             filelist.append(f)
-        if f == Generations.solution:
+        if f == Generations_Numpy.solution:
             os.rename(f, "CalibratedSolution.inp")
     for f in filelist:
         os.remove(os.path.join(dir_path, f))
     return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    pool_initializer()
     first_generation()
     subsequent_generations()
     cleanup()
-    tracker.print_diff()
     print("Time elapsed:", time.time() - start_time)
-
-
-
-

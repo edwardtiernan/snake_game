@@ -1,5 +1,6 @@
 import FileSettings
-import Generations
+import Generations_Numpy
+import DelineateNetwork
 from pyswmm import Simulation, Nodes
 import datetime
 import re
@@ -8,7 +9,13 @@ import numpy as np
 import CreateGuesses
 
 
-def readobservationfile(observationdatafile):
+def readobservationfile(observationdatafile=FileSettings.settingsdict['observationdatafile']):
+    """ Reads the observationdatafile as a time series and puts it into a list of floats.  This list is later compared
+    to the floats parsed from the PySWMM reader of SWMM output.
+
+    :param observationdatafile:
+    :return time_difference:
+    """
     with open(observationdatafile, 'r') as obs_file:
         global contents
         contents = obs_file.readlines()
@@ -42,7 +49,16 @@ def readobservationfile(observationdatafile):
     return time_difference
 
 
+readobservationfile()
+
+
 def normalizedpeakerror():
+    """ Evaluates the NPE by comparing the maximum of the "obs_data" list of floats to the maximum of the "hydrograph"
+    list of floats determined by PySWMMs parser of SWMMs output.
+    Requires that readobservationfile() and PySWMM have both been called to initialize "obs_data" and "hydrograph".
+
+    :return peak_error: A float metric of the difference in absolute value between the two compared time series's peaks
+    """
     peak_simulation = max(hydrograph)
     peak_observation = max(obs_data)
     peak_error = abs(peak_simulation - peak_observation)/(peak_observation + peak_simulation)
@@ -50,6 +66,13 @@ def normalizedpeakerror():
 
 
 def normalizedvolumeerror():
+    """ Evaluates the NVE by comparing the trapezoidal approximation of the list of floats contained within "obs_data"
+    and "hydrograph"
+    Requires that readobservationfile() and PySWMM have both been called to initialize "obs_data" and "hydrograph".
+
+    :return volume_error: A float metric of the difference in absolute value between the two compared time series's
+    volume approximations
+    """
     volume_simulation = 0
     volume_observation = 0
     for sim_index in range(1,len(hydrograph)):
@@ -63,6 +86,13 @@ def normalizedvolumeerror():
 
 
 def nashsutcliffe():
+    """Evaluates the NSE_m by computing the ratio of the difference of "obs_data" and "hydrograph" at each index to the
+    difference between "obs_data" and its own average.
+    Requires that readobservationfile() and PySWMM have both been called to initialize "obs_data" and "hydrograph".
+
+    :return NSE_m: A float metric of the ratio between the predictive power of the model and the predictive power of
+    simply the average of the observed data
+    """
     average_obs = sum(obs_data)/len(obs_data)
     sum_sim_obs = 0
     sum_obs_obsave = 0
@@ -76,6 +106,12 @@ def nashsutcliffe():
 
 
 def NED(trialfilename):
+    """ Evaluates the NED by computing the euclidean distance from the origin of the vector composed of the
+    maximum-normalized difference between each element of the guess input file and the "distancefilename"
+
+    :param trialfilename: the guess input file whose spatial relationship to the "distancefilename" is being assessed
+    :return NED: A float metric of the distance between the two guesses in the feasible parameter space
+    """
     random_guess = CreateGuesses.compile_initial_guess(trialfilename)
     initial_guess = CreateGuesses.compile_initial_guess(FileSettings.settingsdict['distancefilename'])
     sum = 0
@@ -91,6 +127,16 @@ def NED(trialfilename):
 
 
 def objectivefunctions(filelist, observationdatafile, distancefilename, root):
+    """ This function does the same thing as Par_objectivefunctions() with the exception being that it accepts a list
+    of strings as an argument and not a string.  This means it is not parallelizable, but still used in the cross-over
+    operation to determine which of the guesses is better.
+
+    :param filelist:
+    :param observationdatafile:
+    :param distancefilename:
+    :param root:
+    :return:
+    """
     global hydrograph, simulation_timestep, sim_time, P_prime
     P_prime = []
     for trialfile in filelist:
@@ -109,16 +155,24 @@ def objectivefunctions(filelist, observationdatafile, distancefilename, root):
     return objFunc
 
 
-def Par_objectivefunctions(trialfile, observationdatafile=FileSettings.settingsdict['observationdatafile']
-                           , distancefilename=FileSettings.settingsdict['distancefilename']
-                           , root=FileSettings.settingsdict['root']):
+def Par_objectivefunctions(trialfile, root=FileSettings.settingsdict['root']):
+    """ This function defines the PySWMM operations that occur for each "trialfile". "Hydrograph" list of floats is
+    defined by calling the SWMM module and assigning the output at each time step to the list. Then each objective
+    function is called and the values are put into a list "objFunc"
+
+    This function is called in parallel by SWMMCALPY, each "trialfile" can be evaluated independently.
+
+    :param trialfile:
+    :param root: necessary to tell PySWMM where to read the total inflow output from
+    :return objFunc: list of floats that gets mapped by the multiprocessing.Pool()
+    """
     global hydrograph, simulation_timestep, sim_time
     hydrograph = []
     sim_time = []
     with Simulation(trialfile) as sim:
         node_object = Nodes(sim)
         root_location = node_object[root]
-        simulation_timestep = readobservationfile(observationdatafile).total_seconds()
+        simulation_timestep = time_difference.total_seconds()
         sim.step_advance(simulation_timestep)
         for step in sim:
             sim_time.append(sim.current_time)
@@ -127,36 +181,45 @@ def Par_objectivefunctions(trialfile, observationdatafile=FileSettings.settingsd
     #P_prime.append(objFunc)
     return(objFunc)
 
+
 def aggregateFunction():
+    """ This function takes the 2D list "P_prime", which contains the 4 objective function values for each guess, and
+    transforms it into a 1D list that contains the aggregate of those objective function values with the weights.  Only
+    used in conjunction with objectivefunctions() because they are not parallelizable.
+
+    :return:
+    """
     global aggFunc
     aggFunc = []
     for objFunc in P_prime:
         aggFunc.append(objFunc[0]*FileSettings.settingsdict['weights'][0] + objFunc[1]*FileSettings.settingsdict['weights'][1] +
                        objFunc[2]*FileSettings.settingsdict['weights'][2] + objFunc[3]*FileSettings.settingsdict['weights'][3])
-    return(aggFunc)
+    return aggFunc
+
 
 def par_aggregateFunction():
     global par_aggFunc
     par_aggFunc = []
-    for objFunc in Generations.P_prime:
-        par_aggFunc.append(
-            objFunc[0] * FileSettings.settingsdict['weights'][0] + objFunc[1] * FileSettings.settingsdict['weights'][
-                1] +
-            objFunc[2] * FileSettings.settingsdict['weights'][2] + objFunc[3] * FileSettings.settingsdict['weights'][3])
-    return (par_aggFunc)
+    for objFunc in Generations_Numpy.P_prime:
+        par_aggFunc.append(objFunc[0] * FileSettings.settingsdict['weights'][0] +
+                           objFunc[1] * FileSettings.settingsdict['weights'][1] +
+                           objFunc[2] * FileSettings.settingsdict['weights'][2] +
+                           objFunc[3] * FileSettings.settingsdict['weights'][3])
+    return par_aggFunc
+
 
 def rankP_prime():
     x = aggregateFunction()
     seq = sorted(x)
     index = [seq.index(v) for v in x]
-    return(index)
-#print(index)
+    return index
+
 
 def par_rankP_prime():
     x = par_aggregateFunction()
     seq = sorted(x)
     index = [seq.index(v) for v in x]
-    return (index)
+    return index
 
 
 
