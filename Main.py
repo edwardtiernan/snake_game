@@ -1,9 +1,8 @@
 import FileSettings
 import DelineateNetwork
 import CreateGuesses
-import Objective_functions
-import NextGuesses
-import Generations_Numpy
+import ObjectiveFunctions
+import Generations
 import os
 import multiprocessing
 import time
@@ -14,7 +13,7 @@ start_time = time.time()
 
 def pool_initializer():
     """ Initializes the multiprocessing variable "pool" that can then be used to .map() the parallelizable functions
-    in Generations_Numpy.py and CreateGuesses.py
+    in Generations.py and CreateGuesses.py
 
     :return pool: a multiprocessing variable that utilizes the number of processors passed by the "multiprocessors"
     keyword in the "settingsdict" dictionary variable.
@@ -40,11 +39,11 @@ def subsequent_generations():
 
     :return: many generations of 200 input files, theoretically converging to minimum objective function guess
     """
-    #Objective_functions.readobservationfile()
+    # Objective_functions.readobservationfile()
 
-    Generations_Numpy.np_generations(FileSettings.settingsdict['Unionsetlist'],
-                                     FileSettings.settingsdict['observationdatafile'],
-                                     FileSettings.settingsdict['distancefilename'], FileSettings.settingsdict['root'])
+    CreateGuesses.np_generations(FileSettings.settingsdict['Unionsetlist'],
+                                 FileSettings.settingsdict['observationdatafile'],
+                                 FileSettings.settingsdict['distancefilename'], FileSettings.settingsdict['root'])
     return
 
 
@@ -59,11 +58,11 @@ def cleanup():
     for f in os.listdir(dir_path):
         if f.startswith("Calibrated"):
             os.remove(os.path.join(dir_path, f))
-        if f.startswith("trialfile") and f != Generations_Numpy.solution:
+        if f.startswith("trialfile") and f != CreateGuesses.solution:
             filelist.append(f)
-        if f.endswith("Example1.rpt") or f.endswith("Example1.out"):
+        if f.endswith("Example1.out"):
             filelist.append(f)
-        if f == Generations_Numpy.solution:
+        if f == CreateGuesses.solution:
             os.rename(f, "CalibratedSolution.inp")
     for f in filelist:
         os.remove(os.path.join(dir_path, f))

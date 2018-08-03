@@ -9,8 +9,9 @@ Time to access tools for speedup analysis
 """
 import FileSettings
 import DelineateNetwork
-import Objective_functions
+import ObjectiveFunctions
 import Main
+import Generations
 import numpy as np
 import random
 import multiprocessing
@@ -294,13 +295,13 @@ def next_fillmatingpool(survivinglist=FileSettings.settingsdict['Unionsetlist'])
     global matingpool
     matingpool = []
     dummylist = [x for x in survivinglist]
-    for i in range(FileSettings.geneticdict['population']+10):
+    for i in range(FileSettings.geneticdict['population']+25):
         choice1 = random.choice(dummylist)
         choice2 = random.choice(dummylist)
         while choice2 == choice1:
             choice2 = random.choice(dummylist)
-        if Objective_functions.par_aggFunc[survivinglist.index(choice1)] < \
-                Objective_functions.par_aggFunc[survivinglist.index(choice2)]:
+        if ObjectiveFunctions.par_aggFunc[survivinglist.index(choice1)] < \
+                ObjectiveFunctions.par_aggFunc[survivinglist.index(choice2)]:
             matingpool.append(choice1)
             dummylist.remove(choice1)
         else:
@@ -309,7 +310,7 @@ def next_fillmatingpool(survivinglist=FileSettings.settingsdict['Unionsetlist'])
 
     global not_selected_list
     not_selected_list = dummylist
-    return not_selected_list
+    return
 
 
 def next_crossover():
@@ -322,22 +323,21 @@ def next_crossover():
     De facto paramater matingpool: list created by next_fillmatingpool
     :return worsetemporaryguess: numpy array containing the mutated guess to be put back into the input file
     """
-    survivinglist_copy = matingpool.copy
-    choice1 = random.choice(survivinglist_copy)
-    survivinglist_copy.remove(choice1)
-    choice2 = random.choice(survivinglist_copy)
+    choice1 = matingpool[0]
+    matingpool.remove(choice1)
+    choice2 = random.choice(matingpool)
     choices = [choice1, choice2]
-    Objective_functions.objectivefunctions(choices, FileSettings.settingsdict['observationdatafile'],
-                                           FileSettings.settingsdict['distancefilename'],
-                                           FileSettings.settingsdict['root'])
-    guesses_Agg = Objective_functions.aggregateFunction()
+    ObjectiveFunctions.objectivefunctions(choices, FileSettings.settingsdict['observationdatafile'],
+                                          FileSettings.settingsdict['distancefilename'],
+                                          FileSettings.settingsdict['root'])
+    guesses_Agg = ObjectiveFunctions.aggregateFunction()
     betterguess = choices[guesses_Agg.index(min(guesses_Agg))]
     worseguess = choices[guesses_Agg.index(max(guesses_Agg))]
     bettertemporaryguess = compile_initial_guess(betterguess)
     worsetemporaryguess = compile_initial_guess(worseguess)
     threshhold = random.uniform(0, FileSettings.geneticdict['crossover_bias'])
-    for i in bettertemporaryguess:
-        for j in bettertemporaryguess[0]:
+    for i in range(len(bettertemporaryguess)):
+        for j in range(len(bettertemporaryguess[0])):
             crossover_setter = random.uniform(0, 1)
             if crossover_setter > (threshhold + FileSettings.geneticdict['crossover_bias']):
                 continue
@@ -347,7 +347,7 @@ def next_crossover():
     return worsetemporaryguess
 
 
-def next_np_createrandomset():
+def next_np_createrandomset(matingpool_array):
     """Creates a copy of the "np_initial_guess" array and subjects that copy to the mutation criteria for producing the
     first generation of guesses from the starting point input file.
 
@@ -355,7 +355,7 @@ def next_np_createrandomset():
     :return np_new_guess: further mutated numpy array to be reinserted into the "contents" list and reconstructed into
                             an input file.
     """
-    np_new_guess = next_crossover()
+    np_new_guess = matingpool_array
     for row in range(len(np_new_guess)):
         for col in range(len(np_new_guess[0])):
             binary_setter = random.uniform(0, 1)
@@ -381,7 +381,7 @@ def next_np_createrandomset():
     return np_new_guess
 
 
-def next_insertguessestoinputfile(trialfile):
+def next_insertguessestoinputfile(matingpool_array, trialfile):
     """Calls np_createrandomset() to grab the mutated "np_new_guess".  The "contents" list of strings is then revisted.
     Where the [SUBCATCHMENTS] and [SUBAREAS] headers are found, the string is split and the parameter values are
     replaced with those from the "np_new_guess" array.  Then the entire amended "contents" list is printed back into a
@@ -390,9 +390,7 @@ def next_insertguessestoinputfile(trialfile):
     :param trialfile:
     :return: The end result is an input file containing the mutated parameter values contained within "np_new_guess"
     """
-
-    # This command has the error.  It should be guess = np_next_createrandomset(), but that causes its own issues.
-    guess = np_createrandomset()
+    guess = next_np_createrandomset(matingpool_array)
     subcatchment_index = contents.index('[SUBCATCHMENTS]\n')
     subareas_index = contents.index('[SUBAREAS]\n')
     for line in contents[subcatchment_index+1:]:
@@ -437,13 +435,33 @@ def next_insertguessestoinputfile(trialfile):
     return
 
 
-def next_par_creategenerations():
-    """ This function controls the parallelized construction of each generation besides the first.  It inherets the
-    "pool" variable from the pool_initializer() function in Main.py.  This allows for the same multiprocessing variable to be
-    used for several applications within SWMMCALPY, avoiding the reallocation of processes which caused it to blow up.
+def np_generations(Unionsetlist, observationdatafile, distancefilename, root):
+    """Governs the generations process for SWMMCALPY.  For X number of generations, each input file is simulated using
+    PySWMM, and then its nearness to the observational data time series is evaluated.  The input files are then ranked
+    and selected by a tournament selection for persistence into the next generation.
 
+    :param Unionsetlist:
+    :param observationdatafile:
+    :param distancefilename:
+    :param root:
     :return:
     """
-    pool = Main.pool_initializer()
-    pool.map(next_insertguessestoinputfile, FileSettings.settingsdict['Unionsetlist'])
+    global solution, iteration
+
+    for iteration in range(FileSettings.geneticdict['generations']):
+        print(iteration)
+        global P_prime
+        P_prime = Main.pool.map(ObjectiveFunctions.Par_objectivefunctions, FileSettings.settingsdict['Unionsetlist'])
+        for guess in ObjectiveFunctions.par_rankP_prime():
+            if guess == 0:
+                print(ObjectiveFunctions.par_aggFunc[ObjectiveFunctions.par_rankP_prime().index(guess)])
+                print(Unionsetlist[ObjectiveFunctions.par_rankP_prime().index(guess)])
+                solution = Unionsetlist[ObjectiveFunctions.par_rankP_prime().index(guess)]
+        next_fillmatingpool()
+        crossover_list = []
+        for guess in range(len(not_selected_list)):
+            crossover_list.append(next_crossover())
+        arg_tup = zip(crossover_list, not_selected_list)
+        pool = Main.pool_initializer()
+        pool.starmap(next_insertguessestoinputfile, arg_tup)
     return
